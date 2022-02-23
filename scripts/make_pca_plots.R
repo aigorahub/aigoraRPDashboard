@@ -1,54 +1,61 @@
-#' Run PCA
-#'
-#' @param data data.frame to be PCAed
-#' @param .id_col id column
-#' @param .attributes selector for attributes to be PCAed
-#' @param num_vars_to_show top n attributes to show in biplots
-#' @param main_color main color
-#' @param minor_color minor color
-#' @param body_bg_col background color
-#' @param custom_theme custom theme
-#'
-#' @return list of PCA plots:
-#' -scree plot
-#' -list of plots of contribution to components
-#' -list of biplots
-#' @export
-#'
-make_pca_plot_list <- function(data,
-                               .id_col,
-                               .attributes = tidyselect::everything(),
-                               num_vars_to_show = NULL,
-                               main_color = "red",
-                               minor_color = "dark grey",
-                               body_bg_col = "white",
-                               custom_theme = ggplot2::theme_minimal()
-) {
-  # browser()
+prep_pca_data <- function(data,
+                          .id_cols,
+                          .attributes_name_colname,
+                          .attributes_value_colname,
+                          .studies_colname,
+                          .panelists_name_colname,
+                          .attributes = tidyselect::everything()) {
 
-  # Prepare data ------------------------------------------------------------
+  # browser()
   pca_data <- data %>%
-    dplyr::rename(rowname = {{ .id_col }}) %>%
-    pivot_wider(id_cols = c(rowname, Study, Panelist_Name), names_from = Attribute_Name, values_from = Attribute_Value) %>%
-    dplyr::group_by(rowname) %>%
+    tidyr::pivot_wider(id_cols = c({{.id_cols}}, {{.panelists_name_colname}}),
+                names_from = {{.attributes_name_colname}},
+                values_from = {{.attributes_value_colname}}) %>%
+    dplyr::group_by(across({{ .id_cols }})) %>%
     dplyr::summarise(dplyr::across({{ .attributes }}, mean, na.rm = TRUE)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(-{{.panelists_name_colname}}) %>%
+    tidyr::unite(rowname, {{.id_cols}}) %>%
     tibble::column_to_rownames()
 
   if(any(is.na(pca_data))) pca_data <- missMDA::imputePCA(pca_data)$completeObs
 
-  eigenvalue_thresh <- max( 100 / (dim(pca_data) - 1) )
+  return(
+    structure(
+      pca_data,
+      class = c("aigora_pca", "tbl_df", "tbl", "data.frame")
+    )
+  )
+}
+
+get_num_comps <- function(pca_res, eigenvalue_thresh){
+  sum(pca_res$eig[, 2] > eigenvalue_thresh)
+}
+
+get_eigenvalue_thresh <- function(pca_data){
+  max( 100 / (dim(pca_data) - 1) )
+}
+
+run_pca <- function(pca_data){
+  eigenvalue_thresh <- get_eigenvalue_thresh(pca_data)
 
   pre_pca_res <- FactoMineR::PCA(pca_data, ncp = Inf, graph = FALSE)
-  num_comps <- sum(pre_pca_res$eig[, 2] > eigenvalue_thresh)
+  num_comps <- get_num_comps(pre_pca_res, eigenvalue_thresh)
 
   pca_res <- FactoMineR::PCA(pca_data, ncp = num_comps, graph = FALSE)
-  num_rel_comps <- sum(pca_res$eig[, 2] > eigenvalue_thresh)
+  num_rel_comps <- get_num_comps(pca_res, eigenvalue_thresh)
 
   if(num_rel_comps < 2) stop("At least two meaningful dimensions are needed to create biplots.  Try increasing the number of attributes.")
 
+  return(pca_res)
+}
 
-  # Scree plot --------------------------------------------------------------
-  scree_plot <- pca_res %>%
+make_scree_plot <- function(pca_res,
+                            eigenvalue_thresh,
+                            main_color = "red",
+                            minor_color = "dark grey",
+                            custom_theme = ggplot2::theme_minimal()){
+  pca_res %>%
     factoextra::fviz_screeplot(
       addlabels = TRUE,
       barfill = main_color,
@@ -61,9 +68,17 @@ make_pca_plot_list <- function(data,
                         linetype = 2) +
     custom_theme
 
+}
 
-  # Importance plots --------------------------------------------------------
-  theo_contrib <- 100 / ncol(pca_data)
+get_theo_contrib <- function(pca_data){
+  100 / ncol(pca_data)
+}
+make_importance_plot <- function(pca_res,
+                                 theo_contrib,
+                                 num_rel_comps,
+                                 main_color = "red",
+                                 minor_color = "dark grey",
+                                 custom_theme = ggplot2::theme_minimal()){
 
   attrib_imp_plot_list <- c(1:num_rel_comps,
                             list(1:num_rel_comps)) %>%
@@ -92,7 +107,14 @@ make_pca_plot_list <- function(data,
     })
 
 
-  # Biplots -----------------------------------------------------------------
+}
+
+make_biblots <- function(pca_res,
+                         num_rel_comps,
+                         num_vars_to_show = NULL,
+                         main_color = "red",
+                         minor_color = "dark grey",
+                         custom_theme = ggplot2::theme_minimal()){
   if(is.null(num_vars_to_show)) {
     select.var <- NULL
   } else {
@@ -126,17 +148,48 @@ make_pca_plot_list <- function(data,
 
       return(output)
     })
+}
 
+#' Run PCA
+#'
+#' @param data data.frame to be PCAed
+#' @param .id_col id column
+#' @param .attributes selector for attributes to be PCAed
+#' @param num_vars_to_show top n attributes to show in biplots
+#' @param main_color main color
+#' @param minor_color minor color
+#' @param body_bg_col background color
+#' @param custom_theme custom theme
+#'
+#' @return list of PCA plots:
+#' -scree plot
+#' -list of plots of contribution to components
+#' -list of biplots
+#' @export
+#'
+plot.aigora_pca <- function(pca_data,
+                            num_vars_to_show = NULL,
+                            main_color = "red",
+                            minor_color = "dark grey",
+                            body_bg_col = "white",
+                            custom_theme = ggplot2::theme_minimal()){
 
+  # browser()
+  eigenvalue_thresh <- get_eigenvalue_thresh(pca_data)
+  pca_res <- run_pca(pca_data)
+  num_rel_comps <- get_num_comps(pca_res, eigenvalue_thresh)
+  theo_contrib <- get_theo_contrib(pca_data)
 
-  # Organize output ---------------------------------------------------------
+  scree_plot <- make_scree_plot(pca_res, eigenvalue_thresh)
+  importance_plot <- make_importance_plot(pca_res, theo_contrib, num_rel_comps)
+  biplots <- make_biblots(pca_res, num_rel_comps, num_vars_to_show)
+
   pca_plot_list <- list(
     "Principle Component Analysis - Diagnostics" = c(
       "Scree Plot" = list(scree_plot),
-      attrib_imp_plot_list
+      importance_plot
     ),
-    "Principle Components Analysis - Biplots with Names" = pca_biplot_list
+    "Principle Components Analysis - Biplots with Names" = biplots
   )
-
   return(pca_plot_list)
 }

@@ -1,4 +1,3 @@
-
 #' Sumtable
 #'
 #' @param data input dataframe
