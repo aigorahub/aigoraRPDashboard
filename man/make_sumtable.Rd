@@ -15,6 +15,8 @@ make_sumtable(
 )
 }
 \arguments{
+\item{data}{input dataframe}
+
 \item{.products_colname}{products column}
 
 \item{.attributes_colname}{attribute names column}
@@ -26,8 +28,6 @@ make_sumtable(
 \item{selected_products}{vector of product names to be selected}
 
 \item{selected_attributes}{vector of attributes names to be selected}
-
-\item{dataio}{input dataframe}
 }
 \value{
 c("tbl_df", "tbl", "data.frame")

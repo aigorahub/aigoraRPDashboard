@@ -1,7 +1,7 @@
 
 #' Sumtable
 #'
-#' @param dataio input dataframe
+#' @param data input dataframe
 #' @param .products_colname products column
 #' @param .attributes_colname attribute names column
 #' @param .attribute_value_colname attribute values column
