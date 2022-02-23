@@ -12,3 +12,11 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 URL: https://github.com/aigorahub/aigoraRPDashboard
 BugReports: https://github.com/aigorahub/aigoraRPDashboard/issues
+Imports: 
+    dplyr,
+    magrittr,
+    tidyr
+Suggests: 
+    testthat (>= 3.0.0),
+    titanic
+Config/testthat/edition: 3
