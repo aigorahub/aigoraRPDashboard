@@ -150,23 +150,6 @@ make_biblots <- function(pca_res,
     })
 }
 
-#' Run PCA
-#'
-#' @param data data.frame to be PCAed
-#' @param .id_col id column
-#' @param .attributes selector for attributes to be PCAed
-#' @param num_vars_to_show top n attributes to show in biplots
-#' @param main_color main color
-#' @param minor_color minor color
-#' @param body_bg_col background color
-#' @param custom_theme custom theme
-#'
-#' @return list of PCA plots:
-#' -scree plot
-#' -list of plots of contribution to components
-#' -list of biplots
-#' @export
-#'
 plot.aigora_pca <- function(pca_data,
                             num_vars_to_show = NULL,
                             main_color = "red",

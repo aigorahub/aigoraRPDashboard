@@ -1,4 +1,10 @@
-makePairwisePlot<-function(attr1, attr2, table){
+makePairwisePlot<-function(attr1,
+                           attr2,
+                           table,
+                           body_bg_col = "white",
+                           body_text_col = "black",
+                           font_size = 12
+                           ){
   attr_pair <- c(attr1, attr2)   #sample(dataVls$attributes, 2, replace = TRUE)
   #browser()
   attr1 <- sym(attr1)
@@ -25,7 +31,7 @@ makePairwisePlot<-function(attr1, attr2, table){
       legend.box.background = element_rect(fill = body_bg_col, color = body_bg_col),
       text = element_text(
         size = font_size,
-        family = font_name,
+        # family = font_name,
         color = body_text_col,
       ),
       legend.position = "bottom"
@@ -35,3 +41,11 @@ makePairwisePlot<-function(attr1, attr2, table){
 
   return(plotObj)
 }
+
+data <- openxlsx::read.xlsx("tests//testdata/Study1.xlsx")%>%
+  tidyr::pivot_longer(cols = dplyr::starts_with("Attribute"),
+                      names_to = "Attribute_Name",
+                      values_to = "Attribute_Value") %>%
+  dplyr::mutate(Study = "Study1")
+
+makePairwisePlot("Attribute11_Scaled", "Attribute11_CATA", data)
