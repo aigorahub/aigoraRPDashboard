@@ -48,4 +48,5 @@ data <- openxlsx::read.xlsx("tests//testdata/Study1.xlsx")%>%
                       values_to = "Attribute_Value") %>%
   dplyr::mutate(Study = "Study1")
 
-makePairwisePlot("Attribute11_Scaled", "Attribute11_CATA", data)
+plot <- makePairwisePlot("Attribute11_Scaled", "Attribute11_CATA", data)
+
