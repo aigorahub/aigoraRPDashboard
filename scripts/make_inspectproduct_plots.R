@@ -1,159 +1,87 @@
 # function to make plot list for inspect products section
 
-make_products_plot_list <- function(tidy_data,
-                                    ag_info,
-                                    use_cluster_order,
-                                    split_by_ag,
-                                    ag_list,
-                                    ...) {
-  # browser()
-
-  alpha_level = 0.05
-
+prep_ag_table <- function(ag_info,
+                        .Attribute_Name_colname,
+                        .Attribute_Group_colname){
   ag_table <- ag_info %>%
-    rename(`Attribute Group` = Attribute_Group, Attribute = Attribute_Name) %>%
+    rename(`Attribute Group` = {{.Attribute_Group_colname}}, Attribute = {{.Attribute_Name_colname}}) %>%
     mutate_all(factor)
-
-  # prepare for plotting for product inspection ----
-
-
-  header_vars <- c("Study", "Product_Name", "Panelist_Name")
-
-  data2 <- tidy_data %>%
-    pivot_wider(id_cols = -c(Attribute_Group, Attribute_Type), names_from = Attribute_Name, values_from = Attribute_Value) %>%
-    select(-Date)
-
-  data3 <- data2 %>%
-    select(-all_of(header_vars)) %>%
-    select(where(~ sum(.) != 0)) %>%
-    bind_cols(data2 %>% select(all_of(header_vars))) %>%
-    select(all_of(header_vars), everything()) %>%
-    as.data.frame()
-
-  res_decat <- SensoMineR::decat(data3, firstvar=5, formul = ~ Product_Name + Panelist_Name + Study,
-                                 proba = alpha_level, graph=FALSE)
-
-  sign_attr <- res_decat$resF %>%
-    rownames_to_column("Attribute") %>%
-    pull(Attribute)
-
-  aov_data <- data3 %>%
-    pivot_longer(-c(Study:Panelist_Name), names_to = "Attribute", values_to = "Response") %>%
-    rename(Sample_Name = Product_Name, Unique_Panelist_ID = Panelist_Name, Session_Name = Study) %>%
-    mutate(Sample_Name = str_replace(Sample_Name, "&", "_")) %>%
-    mutate(Sample_Name = as.factor(Sample_Name)) %>%
-    split(.$Attribute) %>%
-    `[`(sign_attr) %>%
-    map(select, -Attribute) %>%
-    map(aov_by_attr)
-
-  lsd_groups <- aov_data %>%
-    map(lsd_by_attr, alpha_level) %>%
-    map(rownames_to_column, "Sample_Name") %>%
-    enframe(name = "Attribute") %>%
-    unnest(cols = value)
+}
 
 
-  # compute mean for all plotting in this section
+prep_inspect_product_data <- function(tidy_data,
+                                      .Attribute_Name_colname,
+                                      .Product_Name_colname,
+                                      .Attribute_Value_colname){
   cluster_data <- tidy_data %>%
-    group_by(Product_Name, Attribute_Name) %>%
-    summarise(mean = mean(Attribute_Value)) %>%
+    group_by({{.Product_Name_colname}}, {{.Attribute_Name_colname}}) %>%
+    summarise(mean = mean({{.Attribute_Value_colname}})) %>%
     ungroup()
 
-  mean_tbl <- cluster_data %>%
+  return(
+    structure(
+      cluster_data,
+      class = c("inspect_product", "tbl_df", "tbl", "data.frame")
+    )
+  )
+}
+
+
+use_cluster_order <- function(cluster_data,
+                              .Attribute_Name_colname,
+                              .Product_Name_colname){
+  cluter_mat <- cluster_data %>%
     pivot_wider(
-      names_from = Attribute_Name,
+      names_from = {{.Attribute_Name_colname}},
       values_from = mean
     ) %>%
-    relocate(any_of(ag_info$Attribute_Name), .after = everything())
+    column_to_rownames(var = rlang::as_label(rlang::enquo(.Product_Name_colname))) %>%
+    as.matrix()
 
+  # order samples
 
-  # create complex heatmap for product data (just one plot total but can be sorted or faceted) ----
+  res_hclust <- cluter_mat %>%
+    dist() %>%
+    hclust(method = "ward.D2")
 
-  if (use_cluster_order) {
-    cluter_mat <- cluster_data %>%
-      pivot_wider(
-        names_from = Attribute,
-        values_from = mean
-      ) %>%
-      column_to_rownames(var = "Product") %>%
-      as.matrix()
+  order_hclust <- res_hclust %>%
+    dendextend::order.hclust()
 
-    # order samples
+  ordered_samples <- rownames(cluter_mat)[order_hclust]
 
-    res_hclust <- cluter_mat %>%
-      dist() %>%
-      hclust(method = "ward.D2")
+  # order attributes
 
-    order_hclust <- res_hclust %>%
-      order.hclust()
+  res_hclust <- cluter_mat %>%
+    t() %>%
+    dist() %>%
+    hclust(method = "ward.D2")
 
-    ordered_samples <- rownames(cluter_mat)[order_hclust]
+  order_hclust <- res_hclust %>%
+    dendextend::order.hclust()
 
-    # order attributes
+  ordered_attribs <-
+    rownames(cluter_mat %>% t())[order_hclust]
 
-    res_hclust <- cluter_mat %>%
-      t() %>%
-      dist() %>%
-      hclust(method = "ward.D2")
+  return(list("ordered_products" = ordered_samples,
+              "ordered_attributes" = ordered_attribs))
+}
 
-    order_hclust <- res_hclust %>%
-      order.hclust()
-
-    ordered_attribs <-
-      rownames(cluter_mat %>% t())[order_hclust]
-
-
-  } else {
-    # keep original order
-
-    ordered_samples <- cluster_data %>%
-      pull(Product_Name) %>%
-      levels()
-
-    ordered_attribs <- cluster_data %>%
-      pull(Attribute_Name) %>%
-      levels()
-  }
-
-  heatmap_plot_data <- cluster_data %>%
-    rename(Attribute = Attribute_Name) %>%
+prep_heatmap_data <- function(cluster_data,
+                              ag_table,
+                              .Attribute_Name_colname,
+                              .Product_Name_colname){
+  # browser()
+  cluster_data %>%
+    rename(Attribute = {{.Attribute_Name_colname}},
+           Product = {{.Product_Name_colname}}) %>%
     inner_join(ag_table) %>%
     # inner_join(sg_table, by = c("Product" = "Sample_Name")) %>%
-    mutate(Product = factor(Product_Name)) %>%
+    mutate(Product = factor(Product)) %>%
     mutate(Attribute = factor(Attribute))
+}
 
-  mid_mean <- heatmap_plot_data %>%
-    pull(mean) %>%
-    range() %>%
-    mean()
-
-  # Bartek
-
-  dark_blue_b <- "#0e2b63"
-  mid_blue_b <- "#004f9f"
-  cyan_b <- "#00b1eb"
-  sky_b <- "#0c61a7"
-  orange_b <- "#ef7d00"
-  green_b <- "#50af47"
-  purple_b <- "#5a328a"
-  yellow_b <- "#ffbb00"
-  light_green_b <- "#afca0b"
-  magenta_b <- "#e72582"
-  grey_b <- "#575756"
-  red_b <- "#eb4a00"
-  brown_b <- "#632900"
-  yellow_gray_b <- "#cfcc2a"
-  rose_b <- "#af474f"
-  dirt_b <- "#8a5c32"
-  blue_green_b <- "#328a83"
-  blue_purple_b <- "#4756af"
-  light_brown_b <- "#af7747"
-  purple_red_b <- "#a647af"
-
-
-  white_b <- "#FFFFFF"
-
+make_heatmap_product <- function(heatmap_plot_data,
+                                 split_by_ag = FALSE){
   heatmap_plot <- heatmap_plot_data %>%
     ggplot(aes(
       x = Attribute,
@@ -163,8 +91,8 @@ make_products_plot_list <- function(tidy_data,
     geom_tile() +
     scale_fill_gradient(
       name = "Mean Rating",
-      low = white_b,
-      high = orange_b
+      low = "#FFFFFF",
+      high = "#ef7d00"
     ) +
     theme(
       axis.line = element_blank(),
@@ -184,71 +112,48 @@ make_products_plot_list <- function(tidy_data,
 
   }
 
+  return(heatmap_plot)
+}
 
-
-  # create correlogram (just one plot total, no sorting or faceting) ----
-
-  corr_plot <- tidy_data %>%
-    rename(Attribute = Attribute_Name) %>%
-    semi_join(ag_table) %>%
-
+make_corr_plot <- function(tidy_data,
+                           .Attribute_Name_colname,
+                           .Product_Name_colname){
+  tidy_data %>%
+    rename(Attribute = {{.Attribute_Name_colname}},
+           Product = {{.Product_Name_colname}}) %>%
     pivot_wider(
-      id_cols = -c(Attribute_Type, Date, Attribute_Group),
+      id_cols = c(Product),
       names_from = "Attribute",
       values_from = Attribute_Value,
       values_fn = mean
     ) %>%
-    select(-Study, -Panelist_Name, -Product_Name) %>%
+    select(-Product) %>%
     cor() %>%
-    ggcorrplot(
+    ggcorrplot::ggcorrplot(
       method = "square",
       type = "lower",
       hc.method = "ward.D2",
-      outline.color = mid_blue_b,
+      outline.color = "#004f9f",
       legend.title = "Correlation"
     ) +
-    scale_fill_gradient2(name = "Correlation", low = white_b, mid = yellow_b, high = orange_b, midpoint = 0)
+    scale_fill_gradient2(name = "Correlation", low = "#FFFFFF", mid = "#ffbb00", high = "#ef7d00", midpoint = 0)
+}
 
-  # Combine heatmap table and correlation plot into a single section ----
-
-  inspect_products_plot_list <-
-    list("Products by Attributes" = heatmap_plot,
-         "Attribute Correlation" = corr_plot) %>%
-    list("Product Diagnostics" = .)
-
-
-
-  # Make bar plots by attribute
-  slide_var <- "Attribute Group"
-
-  as_bar_plot_data_list <- cluster_data %>%
-    rename(Attribute = Attribute_Name) %>%
+prep_barplot_data <- function(cluster_data,
+                              ag_table,
+                              .Attribute_Name_colname,
+                              slide_var){
+  cluster_data %>%
+    rename(Attribute = {{.Attribute_Name_colname}}) %>%
     inner_join(ag_table) %>%
     split(.[[slide_var]])
+}
 
-  bar_var <- "Product_Name"
-  fill_var <- "Attribute"
-  scale_lim <- 7
-
-
-
-  as_bar_plot_list <- as_bar_plot_data_list %>%
-    map(
-      make_bar_plot,
-      bar_var = bar_var,
-      fill_var = fill_var,
-      # split_var = split_var,
-      scale_lim = scale_lim,
-      ag_table = ag_table
-    ) %>%
-    list("Bar Plots by Attribute" = .)
-
-  # Make bar plots by sample
-
-  # make spider plots - one plot per pair in sg_list x ag_list ----
-
-  spider_plot_data_list <- cluster_data %>%
-    rename(Attribute = Attribute_Name) %>%
+prep_spiderplot_data <- function(cluster_data,
+                                 ag_table,
+                                 .Attribute_Name_colname){
+  cluster_data %>%
+    rename(Attribute = {{.Attribute_Name_colname}}) %>%
     inner_join(ag_table) %>%
     group_by(`Attribute Group`) %>%
     mutate(attribute_elim = length(unique(Attribute))) %>%
@@ -257,47 +162,6 @@ make_products_plot_list <- function(tidy_data,
     ungroup() %>%
     split(.$`Attribute Group`) %>%
     map(droplevels)
-
-  spider_plot_list <- spider_plot_data_list %>%
-    map(
-      .f = make_radar_plot
-    )
-
-  as_bar_plot_list = as_bar_plot_list[[1]]
-  #added by hamza
-
-
-  as<-list()
-
-  for(p in 1:length(as_bar_plot_list)){
-    as[[paste("Samples Mean Score", p)]]<-as_bar_plot_list[[p]]
-  }
-
-  spider_plot_list<-list("Radar Plots by Attributes"  =spider_plot_list )
-  as_bar_plot_list<-list("Bar Plots by Attributes" =as )
-  product_plot_list <-
-    c(
-      inspect_products_plot_list,
-      as_bar_plot_list,
-      spider_plot_list
-    )
-
-
-  return(list(product_plot_list, mean_tbl))
-}
-
-# functions for aov and lsd analysis
-
-aov_by_attr <- function (aov_data){
-
-  aov(Response ~ Sample_Name + Unique_Panelist_ID + Session_Name, data=aov_data)
-}
-
-lsd_by_attr <- function(model, alpha_level) {
-
-  lsd_res <- agricolae::LSD.test(model, "Sample_Name", p.adj = "none", group = TRUE, alpha = alpha_level)
-
-  return(lsd_res$groups)
 }
 
 # create barplots (one plot per attribute, can be faceted by sample group) ----
@@ -410,3 +274,107 @@ make_radar_plot <- function(radar_plot_data
     guides(color = guide_legend(nrow = 2)) +
     coord_equal(clip = "off")
 }
+
+plot.inspect_product <- function(cluster_data,
+                                 tidy_data,
+                                 ag_info,
+                                 .Attribute_Name_colname,
+                                 .Product_Name_colname,
+                                 .Attribute_Group_colname,
+                                 split_by_ag = FALSE){
+  # browser()
+  ag_table <- prep_ag_table(ag_info = ag_info,
+                            .Attribute_Name_colname = {{.Attribute_Name_colname}},
+                            .Attribute_Group_colname =  Group)
+
+  heatmap_data <- prep_heatmap_data(cluster_data = cluster_data,
+                                    ag_table = ag_table,
+                                    .Attribute_Name_colname = {{.Attribute_Name_colname}},
+                                    .Product_Name_colname = {{.Product_Name_colname}})
+
+  heatmap <- make_heatmap_product(heatmap_data,
+                                  split_by_ag = split_by_ag)
+
+  corr_plot <- make_corr_plot(tidy_data,
+                              .Attribute_Name_colname = {{.Attribute_Name_colname}},
+                              .Product_Name_colname = {{.Product_Name_colname}})
+
+  barplot_data <- prep_barplot_data(cluster_data = cluster_data,
+                                    ag_table = ag_table,
+                                    .Attribute_Name_colname = {{.Attribute_Name_colname}},
+                                    slide_var = "Attribute Group")
+
+  spiderplot_data <- prep_spiderplot_data(cluster_data = cluster_data,
+                                          ag_table = ag_table,
+                                          .Attribute_Name_colname = {{.Attribute_Name_colname}})
+
+
+  inspect_products_plot_list <-
+    list("Products by Attributes" = heatmap,
+         "Attribute Correlation" = corr_plot) %>%
+    list("Product Diagnostics" = .)
+
+
+
+  # Make bar plots by attribute
+  bar_var <- "Product_Name"
+  fill_var <- "Attribute"
+  scale_lim <- 7
+
+  as_bar_plot_list <- barplot_data %>%
+    map(
+      make_bar_plot,
+      bar_var = bar_var,
+      fill_var = fill_var,
+      # split_var = split_var,
+      scale_lim = scale_lim,
+      ag_table = ag_table
+    ) %>%
+    list("Bar Plots by Attribute" = .)
+
+
+  spider_plot_list <- spiderplot_data %>%
+    map(
+      .f = make_radar_plot
+    )
+
+  as_bar_plot_list = as_bar_plot_list[[1]]
+
+  as<-list()
+
+  for(p in 1:length(as_bar_plot_list)){
+    as[[paste("Samples Mean Score", p)]] <- as_bar_plot_list[[p]]
+  }
+
+  spider_plot_list<-list("Radar Plots by Attributes"  = spider_plot_list )
+  as_bar_plot_list<-list("Bar Plots by Attributes" = as )
+  product_plot_list <-
+    c(
+      inspect_products_plot_list,
+      as_bar_plot_list,
+      spider_plot_list
+    )
+
+
+  return(product_plot_list)
+}
+
+ag_info <- openxlsx::read.xlsx("tests//testdata/Study1.xlsx", sheet = 2)
+tidy_data <- openxlsx::read.xlsx("tests//testdata/Study1.xlsx")%>%
+  tidyr::pivot_longer(cols = dplyr::starts_with("Attribute"),
+                      names_to = "Attribute_Name",
+                      values_to = "Attribute_Value") %>%
+  dplyr::mutate(Study = "Study1")
+
+cluster_data <- prep_inspect_product_data(tidy_data = tidy_data,
+                                          .Attribute_Name_colname = Attribute_Name,
+                                          .Product_Name_colname =  Product_Name,
+                                          .Attribute_Value_colname =  Attribute_Value)
+
+plot(cluster_data = cluster_data,
+     tidy_data = tidy_data,
+     ag_info = ag_info,
+     .Attribute_Name_colname = Attribute_Name,
+     .Product_Name_colname =  Product_Name,
+     .Attribute_Group_colname = Group,
+     split_by_ag = FALSE)
