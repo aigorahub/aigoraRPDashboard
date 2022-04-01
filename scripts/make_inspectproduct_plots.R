@@ -4,8 +4,8 @@ prep_ag_table <- function(ag_info,
                         .Attribute_Name_colname,
                         .Attribute_Group_colname){
   ag_table <- ag_info %>%
-    rename(`Attribute Group` = {{.Attribute_Group_colname}}, Attribute = {{.Attribute_Name_colname}}) %>%
-    mutate_all(factor)
+    dplyr::rename(`Attribute Group` = {{.Attribute_Group_colname}}, Attribute = {{.Attribute_Name_colname}}) %>%
+    dplyr::mutate_all(factor)
 }
 
 
@@ -14,9 +14,9 @@ prep_inspect_product_data <- function(tidy_data,
                                       .Product_Name_colname,
                                       .Attribute_Value_colname){
   cluster_data <- tidy_data %>%
-    group_by({{.Product_Name_colname}}, {{.Attribute_Name_colname}}) %>%
-    summarise(mean = mean({{.Attribute_Value_colname}})) %>%
-    ungroup()
+    dplyr::group_by({{.Product_Name_colname}}, {{.Attribute_Name_colname}}) %>%
+    dplyr::summarise(mean = mean({{.Attribute_Value_colname}})) %>%
+    dplyr::ungroup()
 
   return(
     structure(
@@ -31,18 +31,18 @@ use_cluster_order <- function(cluster_data,
                               .Attribute_Name_colname,
                               .Product_Name_colname){
   cluter_mat <- cluster_data %>%
-    pivot_wider(
+    tidyr::pivot_wider(
       names_from = {{.Attribute_Name_colname}},
       values_from = mean
     ) %>%
-    column_to_rownames(var = rlang::as_label(rlang::enquo(.Product_Name_colname))) %>%
+    tibble::column_to_rownames(var = rlang::as_label(rlang::enquo(.Product_Name_colname))) %>%
     as.matrix()
 
   # order samples
 
   res_hclust <- cluter_mat %>%
-    dist() %>%
-    hclust(method = "ward.D2")
+    factoextra::dist() %>% # TODO: make sure which package this function is called from
+    stats::hclust(method = "ward.D2")
 
   order_hclust <- res_hclust %>%
     dendextend::order.hclust()
@@ -53,8 +53,8 @@ use_cluster_order <- function(cluster_data,
 
   res_hclust <- cluter_mat %>%
     t() %>%
-    dist() %>%
-    hclust(method = "ward.D2")
+    factoextra::dist() %>%
+    stats::hclust(method = "ward.D2")
 
   order_hclust <- res_hclust %>%
     dendextend::order.hclust()
@@ -72,43 +72,43 @@ prep_heatmap_data <- function(cluster_data,
                               .Product_Name_colname){
   # browser()
   cluster_data %>%
-    rename(Attribute = {{.Attribute_Name_colname}},
+    dplyr::rename(Attribute = {{.Attribute_Name_colname}},
            Product = {{.Product_Name_colname}}) %>%
-    inner_join(ag_table) %>%
+    dplyr::inner_join(ag_table) %>%
     # inner_join(sg_table, by = c("Product" = "Sample_Name")) %>%
-    mutate(Product = factor(Product)) %>%
-    mutate(Attribute = factor(Attribute))
+    dplyr::mutate(Product = factor(Product)) %>%
+    dplyr::mutate(Attribute = factor(Attribute))
 }
 
 make_heatmap_product <- function(heatmap_plot_data,
                                  split_by_ag = FALSE){
   heatmap_plot <- heatmap_plot_data %>%
-    ggplot(aes(
+    ggplot2::ggplot(ggplot2::aes(
       x = Attribute,
-      y = fct_rev(Product),
+      y = forcats::fct_rev(Product),
       fill = mean
     )) +
-    geom_tile() +
-    scale_fill_gradient(
+    ggplot2::geom_tile() +
+    ggplot2::scale_fill_gradient(
       name = "Mean Rating",
       low = "#FFFFFF",
       high = "#ef7d00"
     ) +
-    theme(
-      axis.line = element_blank(),
-      panel.background = element_blank(),
-      panel.grid = element_blank(),
+    ggplot2::theme(
+      axis.line = ggplot2::element_blank(),
+      panel.background = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
 
       legend.position = "bottom",
-      axis.title = element_blank(),
-      axis.text.x = element_text(angle = 45, hjust = 1)
+      axis.title = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
     ) +
-    guides(fill = guide_legend(title.position = "top", title.hjust = 0.5)) +
-    coord_flip()
+    ggplot2::guides(fill = ggplot2::guide_legend(title.position = "top", title.hjust = 0.5)) +
+    ggplot2::coord_flip()
 
   if (split_by_ag) {
     heatmap_plot <- heatmap_plot +
-      facet_wrap(~ `Attribute Group`, nrow = 1, scales = "free_x")
+      ggplot2::facet_wrap(~ `Attribute Group`, nrow = 1, scales = "free_x")
 
   }
 
@@ -119,16 +119,16 @@ make_corr_plot <- function(tidy_data,
                            .Attribute_Name_colname,
                            .Product_Name_colname){
   tidy_data %>%
-    rename(Attribute = {{.Attribute_Name_colname}},
+    dplyr::rename(Attribute = {{.Attribute_Name_colname}},
            Product = {{.Product_Name_colname}}) %>%
-    pivot_wider(
+    tidyr::pivot_wider(
       id_cols = c(Product),
       names_from = "Attribute",
       values_from = Attribute_Value,
       values_fn = mean
     ) %>%
-    select(-Product) %>%
-    cor() %>%
+    dplyr::select(-Product) %>%
+    stats::cor() %>%
     ggcorrplot::ggcorrplot(
       method = "square",
       type = "lower",
@@ -136,7 +136,7 @@ make_corr_plot <- function(tidy_data,
       outline.color = "#004f9f",
       legend.title = "Correlation"
     ) +
-    scale_fill_gradient2(name = "Correlation", low = "#FFFFFF", mid = "#ffbb00", high = "#ef7d00", midpoint = 0)
+    ggplot2::scale_fill_gradient2(name = "Correlation", low = "#FFFFFF", mid = "#ffbb00", high = "#ef7d00", midpoint = 0)
 }
 
 prep_barplot_data <- function(cluster_data,
@@ -144,8 +144,8 @@ prep_barplot_data <- function(cluster_data,
                               .Attribute_Name_colname,
                               slide_var){
   cluster_data %>%
-    rename(Attribute = {{.Attribute_Name_colname}}) %>%
-    inner_join(ag_table) %>%
+    dplyr::rename(Attribute = {{.Attribute_Name_colname}}) %>%
+    dplyr::inner_join(ag_table) %>%
     split(.[[slide_var]])
 }
 
@@ -153,15 +153,15 @@ prep_spiderplot_data <- function(cluster_data,
                                  ag_table,
                                  .Attribute_Name_colname){
   cluster_data %>%
-    rename(Attribute = {{.Attribute_Name_colname}}) %>%
-    inner_join(ag_table) %>%
-    group_by(`Attribute Group`) %>%
-    mutate(attribute_elim = length(unique(Attribute))) %>%
-    filter(attribute_elim > 1) %>%
-    select(-attribute_elim) %>%
-    ungroup() %>%
+    dplyr::rename(Attribute = {{.Attribute_Name_colname}}) %>%
+    dplyr::inner_join(ag_table) %>%
+    dplyr::group_by(`Attribute Group`) %>%
+    dplyr::mutate(attribute_elim = length(unique(Attribute))) %>%
+    dplyr::filter(attribute_elim > 1) %>%
+    dplyr::select(-attribute_elim) %>%
+    dplyr::ungroup() %>%
     split(.$`Attribute Group`) %>%
-    map(droplevels)
+    purrr::map(droplevels)
 }
 
 # create barplots (one plot per attribute, can be faceted by sample group) ----
@@ -175,57 +175,56 @@ make_bar_plot <-
     # browser()
 
     plot_data <- bar_plot_data %>%
-      select(all_of(bar_var), all_of(fill_var), mean) %>%
-      mutate(label = '') %>%
-      set_names(c("bar_var", "fill_var", "mean", "label"))
+      dplyr::select(tidyselect::all_of(bar_var), tidyselect::all_of(fill_var), mean) %>%
+      dplyr::mutate(label = '') %>%
+      rlang::set_names(c("bar_var", "fill_var", "mean", "label"))
 
     bar_var_match <- all(plot_data$bar_var %in% ag_table$Attribute)
     fill_var_match <- all(plot_data$fill_var %in% ag_table$Attribute)
 
     if(bar_var_match){
       plot_data <- plot_data %>%
-        mutate(bar_var = factor(bar_var, levels = ag_table$Attribute))
+        dplyr::mutate(bar_var = factor(bar_var, levels = ag_table$Attribute))
     }
     if(fill_var_match){
       plot_data <- plot_data %>%
-        mutate(fill_var = factor(fill_var, levels = ag_table$Attribute))
+        dplyr::mutate(fill_var = factor(fill_var, levels = ag_table$Attribute))
     }
     colourCount = length(unique(plot_data$fill_var))
     getPalette = grDevices::colorRampPalette(RColorBrewer::brewer.pal(11, "RdYlBu"))
 
     output <- plot_data %>%
-      mutate(bar_var=as.factor(split_text_to_lines(as.character(bar_var), max_char_in_line = 7))) %>%
-      ggplot(aes(x = bar_var, y = mean, fill = fill_var)) +
-      geom_col(position = "dodge") +
-
-      scale_y_continuous(breaks = c(0:scale_lim), limits = c(0, scale_lim)) +
-      ylab("Mean Score") +
-      theme(
-        axis.line = element_blank(),
-        axis.ticks = element_blank(),
+      dplyr::mutate(bar_var=as.factor(split_text_to_lines(as.character(bar_var), max_char_in_line = 7))) %>%
+      ggplot2::ggplot(ggplot2::aes(x = bar_var, y = mean, fill = fill_var)) +
+      ggplot2::geom_col(position = "dodge") +
+      ggplot2::scale_y_continuous(breaks = c(0:scale_lim), limits = c(0, scale_lim)) +
+      ggplot2::ylab("Mean Score") +
+      ggplot2::theme(
+        axis.line = ggplot2::element_blank(),
+        axis.ticks = ggplot2::element_blank(),
         legend.position = "bottom",
-        axis.title.x = element_blank(),
+        axis.title.x = ggplot2::element_blank(),
 
-        legend.title = element_blank(),
-        panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = "#cfcbca"),
-        panel.background = element_rect(fill = "white",
+        legend.title = ggplot2::element_blank(),
+        panel.grid.major.x = ggplot2::element_blank(),
+        panel.grid.major.y = ggplot2::element_line(colour = "#cfcbca"),
+        panel.background = ggplot2::element_rect(fill = "white",
                                         colour = "white",
                                         size = 0.5, linetype = "solid"),
-        plot.title = element_text(hjust = 0.5)
+        plot.title = ggplot2::element_text(hjust = 0.5)
 
       ) +
-      geom_text(aes(label = label),
-                position = position_dodge(w = 0.9),
+      ggplot2::geom_text(ggplot2::aes(label = label),
+                position = ggplot2::position_dodge(w = 0.9),
                 vjust = -0.5
       ) +
-      scale_fill_manual(values = getPalette(colourCount))
+      ggplot2::scale_fill_manual(values = getPalette(colourCount))
 
     return(output)
   }
 
-split_text_to_lines <- function(text, max_char_in_line = 10){
-  letters <- strsplit(text, "")[[1]]
+split_text_to_lines <- Vectorize(function(text, max_char_in_line = 10){
+  letters <- stringr::str_split(text, "")[[1]]
   n_lines <- ceiling(length(letters)/max_char_in_line)
 
   if(length(letters) > max_char_in_line){
@@ -243,21 +242,21 @@ split_text_to_lines <- function(text, max_char_in_line = 10){
 
   }
   return(paste(letters, collapse = ''))
-}
-split_text_to_lines <- Vectorize(split_text_to_lines)
+})
+# split_text_to_lines <- Vectorize(split_text_to_lines)
 
 
 make_radar_plot <- function(radar_plot_data
 ) {
   # browser()
   radar_plot_data %>%
-    select(Product_Name, Attribute, mean) %>%
-    pivot_wider(names_from = Attribute, values_from = mean) %>%
-    column_to_rownames("Product_Name") %>%
-    mutate(across(where(is.numeric), ~(. - min(.))/(max(.) - min(.)))) %>%
-    mutate(across(where(is.numeric), replace_na, 0.5)) %>%
-    mutate(group = rownames(.)) %>%
-    relocate(group, .before = everything()) %>%
+    dplyr::select(Product_Name, Attribute, mean) %>%
+    tidyr::pivot_wider(names_from = Attribute, values_from = mean) %>%
+    tibble::column_to_rownames("Product_Name") %>%
+    dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), ~(. - min(.))/(max(.) - min(.)))) %>%
+    dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), replace_na, 0.5)) %>%
+    dplyr::mutate(group = rownames(.)) %>%
+    dplyr::relocate(group, .before = tidyselect::everything()) %>%
     as.data.frame() %>%
     ggradar::ggradar(
       group.line.width = 0.8,
@@ -271,8 +270,8 @@ make_radar_plot <- function(radar_plot_data
       gridline.max.colour = "gray",
       gridline.mid.colour = "gray",
     ) +
-    guides(color = guide_legend(nrow = 2)) +
-    coord_equal(clip = "off")
+    ggplot2::guides(color = ggplot2::guide_legend(nrow = 2)) +
+    ggplot2::coord_equal(clip = "off")
 }
 
 plot.inspect_product <- function(cluster_data,
@@ -322,7 +321,7 @@ plot.inspect_product <- function(cluster_data,
   scale_lim <- 7
 
   as_bar_plot_list <- barplot_data %>%
-    map(
+    purrr::map(
       make_bar_plot,
       bar_var = bar_var,
       fill_var = fill_var,
@@ -334,7 +333,7 @@ plot.inspect_product <- function(cluster_data,
 
 
   spider_plot_list <- spiderplot_data %>%
-    map(
+    purrr::map(
       .f = make_radar_plot
     )
 
@@ -358,23 +357,23 @@ plot.inspect_product <- function(cluster_data,
 
   return(product_plot_list)
 }
+#
+# ag_info <- openxlsx::read.xlsx("tests//testdata/Study1.xlsx", sheet = 2)
+# tidy_data <- openxlsx::read.xlsx("tests//testdata/Study1.xlsx")%>%
+#   tidyr::pivot_longer(cols = tidyselect::starts_with("Attribute"),
+#                       names_to = "Attribute_Name",
+#                       values_to = "Attribute_Value") %>%
+#   dplyr::mutate(Study = "Study1")
 
-ag_info <- openxlsx::read.xlsx("tests//testdata/Study1.xlsx", sheet = 2)
-tidy_data <- openxlsx::read.xlsx("tests//testdata/Study1.xlsx")%>%
-  tidyr::pivot_longer(cols = dplyr::starts_with("Attribute"),
-                      names_to = "Attribute_Name",
-                      values_to = "Attribute_Value") %>%
-  dplyr::mutate(Study = "Study1")
-
-cluster_data <- prep_inspect_product_data(tidy_data = tidy_data,
-                                          .Attribute_Name_colname = Attribute_Name,
-                                          .Product_Name_colname =  Product_Name,
-                                          .Attribute_Value_colname =  Attribute_Value)
-
-plot(cluster_data = cluster_data,
-     tidy_data = tidy_data,
-     ag_info = ag_info,
-     .Attribute_Name_colname = Attribute_Name,
-     .Product_Name_colname =  Product_Name,
-     .Attribute_Group_colname = Group,
-     split_by_ag = FALSE)
+# cluster_data <- prep_inspect_product_data(tidy_data = tidy_data,
+#                                           .Attribute_Name_colname = Attribute_Name,
+#                                           .Product_Name_colname =  Product_Name,
+#                                           .Attribute_Value_colname =  Attribute_Value)
+#
+# plot(cluster_data = cluster_data,
+#      tidy_data = tidy_data,
+#      ag_info = ag_info,
+#      .Attribute_Name_colname = Attribute_Name,
+#      .Product_Name_colname =  Product_Name,
+#      .Attribute_Group_colname = Group,
+#      split_by_ag = FALSE)
