@@ -7,29 +7,29 @@ makePairwisePlot<-function(attr1,
                            ){
   attr_pair <- c(attr1, attr2)   #sample(dataVls$attributes, 2, replace = TRUE)
   #browser()
-  attr1 <- sym(attr1)
-  attr2 <- sym(attr2)
+  attr1 <- rlang::sym(attr1)
+  attr2 <- rlang::sym(attr2)
 
-  attr_pair_mat <- str_c(attr_pair, collapse = "|")
+  attr_pair_mat <- stringr::str_c(attr_pair, collapse = "|")
 
   plotObj <- table %>%
-    select(Product_Name, Attribute_Name, Attribute_Value) %>%
-    group_by(Product_Name, Attribute_Name) %>%
-    summarize(Response = mean(Attribute_Value)) %>%
-    ungroup() %>%
-    pivot_wider(names_from = Attribute_Name, values_from = Response) %>%
-    ggplot(aes(x = !!attr1, y = !!attr2)) +
-    geom_point() +
+    dplyr::select(Product_Name, Attribute_Name, Attribute_Value) %>%
+    dplyr::group_by(Product_Name, Attribute_Name) %>%
+    dplyr::summarize(Response = mean(Attribute_Value)) %>%
+    dplyr::ungroup() %>%
+    tidyr::pivot_wider(names_from = Attribute_Name, values_from = Response) %>%
+    ggplot2::ggplot(aes(x = !!attr1, y = !!attr2)) +
+    ggplot2::geom_point() +
     ggrepel::geom_text_repel(aes(label = Product_Name)) +
-    theme(
-      axis.line = element_blank(),
-      panel.background = element_blank(),
-      plot.background = element_rect(fill = body_bg_col, color = body_bg_col),
-      panel.grid = element_blank(),
-      legend.background = element_rect(fill = body_bg_col, color = body_bg_col),
-      legend.key = element_rect(fill = body_bg_col, color = body_bg_col),
-      legend.box.background = element_rect(fill = body_bg_col, color = body_bg_col),
-      text = element_text(
+    ggplot2::theme(
+      axis.line = ggplot2::element_blank(),
+      panel.background = ggplot2::element_blank(),
+      plot.background = ggplot2::element_rect(fill = body_bg_col, color = body_bg_col),
+      panel.grid = ggplot2::element_blank(),
+      legend.background = ggplot2::element_rect(fill = body_bg_col, color = body_bg_col),
+      legend.key = ggplot2::element_rect(fill = body_bg_col, color = body_bg_col),
+      legend.box.background = ggplot2::element_rect(fill = body_bg_col, color = body_bg_col),
+      text = ggplot2::element_text(
         size = font_size,
         # family = font_name,
         color = body_text_col,
@@ -37,7 +37,7 @@ makePairwisePlot<-function(attr1,
       legend.position = "bottom"
       #axis.title = element_blank()
     ) +
-    guides(fill = guide_legend(title.position = "top", title.hjust = 0.5))
+    ggplot2::guides(fill = ggplot2::guide_legend(title.position = "top", title.hjust = 0.5))
 
   return(plotObj)
 }

@@ -5,19 +5,19 @@ prep_panel_data <- function(data,
                             .Attribute_Value_colname){
   panel_data <- data %>%
     droplevels() %>%
-    mutate(
+    dplyr::mutate(
       Product = factor({{.Product_Name_colname}}),
       Panelist = factor({{.Panelist_Name_colname}}),
       Attribute = factor({{.Attribute_Name_colname}})
     ) %>%
-    select(Panelist, Product, Attribute, Response = {{.Attribute_Value_colname}})
+    dplyr::select(Panelist, Product, Attribute, Response = {{.Attribute_Value_colname}})
 
-  return(structure(
-    panel_data,
-    class = c("aigora_inspect_panel", "tbl_df", "tbl", "data.frame")
-  ))
+  return(
+    structure(
+      panel_data,
+      class = c("aigora_inspect_panel", "tbl_df", "tbl", "data.frame")
+    ))
 }
-
 
 prep_plot_data <- function(){
   UseMethod("prep_plot_data")
@@ -27,26 +27,26 @@ prep_plot_data <- function(panel_data, .variable_to_present){
 
   # browser()
   panelist_by_var_data <- panel_data %>%
-    group_by(dplyr::across(c(Panelist, {{.variable_to_present}}))) %>%
-    summarise(mean = mean(Response)) %>%
-    ungroup()
+    dplyr::group_by(dplyr::across(c(Panelist, {{.variable_to_present}}))) %>%
+    dplyr::summarise(mean = mean(Response)) %>%
+    dplyr::ungroup()
 
   ordered_variable <- panelist_by_var_data %>%
-    pull({{.variable_to_present}}) %>%
+    dplyr::pull({{.variable_to_present}}) %>%
     levels()
 
   ordered_panelists <- panelist_by_var_data %>%
-    pull(Panelist) %>%
+    dplyr::pull(Panelist) %>%
     levels()
 
   panelist_by_var_mid_mean <- panelist_by_var_data %>%
-    pull(mean) %>%
+    dplyr::pull(mean) %>%
     range() %>%
     mean()
 
   panelist_by_var_plot_data <- panelist_by_var_data %>%
-    mutate({{.variable_to_present}} := factor({{.variable_to_present}}, levels = ordered_variable)) %>%
-    mutate(Panelist = factor(Panelist, levels = ordered_panelists))
+    dplyr::mutate({{.variable_to_present}} := factor({{.variable_to_present}}, levels = ordered_variable)) %>%
+    dplyr::mutate(Panelist = factor(Panelist, levels = ordered_panelists))
 
   return(panelist_by_var_plot_data)
 }
@@ -57,25 +57,25 @@ plot_panel_heatmap <- function(prepared_panel_data,
                                .variable_to_present){
 
   prepared_panel_data %>%
-    ggplot(aes(
+    ggplot2::ggplot(ggplot2::aes(
       x = Panelist,
-      y = fct_rev({{.variable_to_present}}),
+      y = forcats::fct_rev({{.variable_to_present}}),
       fill = mean
     )) +
-    geom_tile() +
-    scale_x_discrete(guide = guide_axis(n.dodge = 3), position = "top") +
-    scale_fill_gradient(
+    ggplot2::geom_tile() +
+    ggplot2::scale_x_discrete(guide = ggplot2::guide_axis(n.dodge = 3), position = "top") +
+    ggplot2::scale_fill_gradient(
       name = "Mean Rating",
       low = "#FFFFFF",
       high = "#ef7d00"
     ) +
-    theme(
-      axis.line = element_blank(),
-      panel.background = element_blank(),
+    ggplot2::theme(
+      axis.line = ggplot2::element_blank(),
+      panel.background = ggplot2::element_blank(),
       legend.position = "bottom",
-      axis.title = element_blank()
+      axis.title = ggplot2::element_blank()
     ) +
-    guides(fill = guide_legend(title.position = "top", title.hjust = 0.5))
+    ggplot2::guides(fill = ggplot2::guide_legend(title.position = "top", title.hjust = 0.5))
 
 }
 
