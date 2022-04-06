@@ -23,3 +23,5 @@ Suggests:
     testthat (>= 3.0.0),
     titanic
 Config/testthat/edition: 3
+Depends: 
+    vdiffr
