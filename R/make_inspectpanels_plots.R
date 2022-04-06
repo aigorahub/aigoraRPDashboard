@@ -1,3 +1,4 @@
+#' @export
 prep_panel_data <- function(data,
                             .Attribute_Name_colname,
                             .Product_Name_colname,
@@ -19,10 +20,12 @@ prep_panel_data <- function(data,
     ))
 }
 
+#' @export
 prep_plot_data <- function(){
   UseMethod("prep_plot_data")
 }
 
+#' @export
 prep_plot_data <- function(panel_data, .variable_to_present){
 
   # browser()
@@ -52,7 +55,7 @@ prep_plot_data <- function(panel_data, .variable_to_present){
 }
 
 
-
+#' @export
 plot_panel_heatmap <- function(prepared_panel_data,
                                .variable_to_present){
 
@@ -79,6 +82,7 @@ plot_panel_heatmap <- function(prepared_panel_data,
 
 }
 
+#' @export
 plot.aigora_inspect_panel <- function(panel_data){
   product_panel_data <- prep_plot_data(panel_data = panel_data, .variable_to_present = Product)
   attribute_panel_data <- prep_plot_data(panel_data = panel_data, .variable_to_present = Attribute)

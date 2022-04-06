@@ -1,3 +1,4 @@
+#' @export
 makePairwisePlot<-function(attr1,
                            attr2,
                            table,

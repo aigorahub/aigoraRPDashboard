@@ -1,5 +1,5 @@
 # function to make plot list for inspect products section
-
+#' @export
 prep_ag_table <- function(ag_info,
                           .Attribute_Name_colname,
                           .Attribute_Group_colname){
@@ -8,7 +8,7 @@ prep_ag_table <- function(ag_info,
     dplyr::mutate_all(factor)
 }
 
-
+#' @export
 prep_inspect_product_data <- function(tidy_data,
                                       .Attribute_Name_colname,
                                       .Product_Name_colname,
@@ -26,7 +26,7 @@ prep_inspect_product_data <- function(tidy_data,
   )
 }
 
-
+#' @export
 use_cluster_order <- function(cluster_data,
                               .Attribute_Name_colname,
                               .Product_Name_colname){
@@ -66,6 +66,7 @@ use_cluster_order <- function(cluster_data,
               "ordered_attributes" = ordered_attribs))
 }
 
+#' @export
 prep_heatmap_data <- function(cluster_data,
                               ag_table,
                               .Attribute_Name_colname,
@@ -80,6 +81,7 @@ prep_heatmap_data <- function(cluster_data,
     dplyr::mutate(Attribute = factor(Attribute))
 }
 
+#' @export
 make_heatmap_product <- function(heatmap_plot_data,
                                  split_by_ag = FALSE){
   heatmap_plot <- heatmap_plot_data %>%
@@ -115,6 +117,7 @@ make_heatmap_product <- function(heatmap_plot_data,
   return(heatmap_plot)
 }
 
+#' @export
 make_corr_plot <- function(tidy_data,
                            .Attribute_Name_colname,
                            .Product_Name_colname){
@@ -139,6 +142,7 @@ make_corr_plot <- function(tidy_data,
     ggplot2::scale_fill_gradient2(name = "Correlation", low = "#FFFFFF", mid = "#ffbb00", high = "#ef7d00", midpoint = 0)
 }
 
+#' @export
 prep_barplot_data <- function(cluster_data,
                               ag_table,
                               .Attribute_Name_colname,
@@ -149,6 +153,7 @@ prep_barplot_data <- function(cluster_data,
     split(.[[slide_var]])
 }
 
+#' @export
 prep_spiderplot_data <- function(cluster_data,
                                  ag_table,
                                  .Attribute_Name_colname){
@@ -165,6 +170,7 @@ prep_spiderplot_data <- function(cluster_data,
 }
 
 # create barplots (one plot per attribute, can be faceted by sample group) ----
+#' @export
 make_bar_plot <-
   function(bar_plot_data,
            fill_var,
@@ -223,6 +229,7 @@ make_bar_plot <-
     return(output)
   }
 
+#' @export
 split_text_to_lines <- Vectorize(function(text, max_char_in_line = 10){
   letters <- stringr::str_split(text, "")[[1]]
   n_lines <- ceiling(length(letters)/max_char_in_line)
@@ -245,7 +252,7 @@ split_text_to_lines <- Vectorize(function(text, max_char_in_line = 10){
 })
 # split_text_to_lines <- Vectorize(split_text_to_lines)
 
-
+#' @export
 make_radar_plot <- function(radar_plot_data
 ) {
   # browser()
@@ -274,6 +281,7 @@ make_radar_plot <- function(radar_plot_data
     ggplot2::coord_equal(clip = "off")
 }
 
+#' @export
 plot.inspect_product <- function(cluster_data,
                                  tidy_data,
                                  ag_info,

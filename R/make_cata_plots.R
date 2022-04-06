@@ -1,3 +1,4 @@
+#' @export
 make_cata_tables <- function(df_cata,
                              .Product_Name_colname,
                              .Attribute_Name_colname,
@@ -18,7 +19,7 @@ make_cata_tables <- function(df_cata,
   )
 }
 
-
+#' @export
 plot.cata_table <- function(cata_summary_table){
   # browser()
   cata_plot <- cata_summary_table %>%

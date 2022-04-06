@@ -1,3 +1,4 @@
+#' @export
 prep_pca_data <- function(data,
                           .id_cols,
                           .attributes_name_colname,
@@ -28,14 +29,17 @@ prep_pca_data <- function(data,
   )
 }
 
+#' @export
 get_num_comps <- function(pca_res, eigenvalue_thresh){
   sum(pca_res$eig[, 2] > eigenvalue_thresh)
 }
 
+#' @export
 get_eigenvalue_thresh <- function(pca_data){
   max( 100 / (dim(pca_data) - 1) )
 }
 
+#' @export
 run_pca <- function(pca_data){
   eigenvalue_thresh <- get_eigenvalue_thresh(pca_data)
 
@@ -50,6 +54,7 @@ run_pca <- function(pca_data){
   return(pca_res)
 }
 
+#' @export
 make_scree_plot <- function(pca_res,
                             eigenvalue_thresh,
                             main_color = "red",
@@ -70,9 +75,12 @@ make_scree_plot <- function(pca_res,
 
 }
 
+#' @export
 get_theo_contrib <- function(pca_data){
   100 / ncol(pca_data)
 }
+
+#' @export
 make_importance_plot <- function(pca_res,
                                  theo_contrib,
                                  num_rel_comps,
@@ -109,6 +117,7 @@ make_importance_plot <- function(pca_res,
 
 }
 
+#' @export
 make_biblots <- function(pca_res,
                          num_rel_comps,
                          num_vars_to_show = NULL,
@@ -150,6 +159,7 @@ make_biblots <- function(pca_res,
     })
 }
 
+#' @export
 plot.aigora_pca <- function(pca_data,
                             num_vars_to_show = NULL,
                             main_color = "red",
