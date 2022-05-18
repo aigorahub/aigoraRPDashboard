@@ -1,7 +1,7 @@
 context("make-pairwise-plots")
 
 
-data <- openxlsx::read.xlsx("../testdata/Study1.xlsx") %>%
+data <- openxlsx::read.xlsx("tests/testdata/Study1.xlsx") %>%
   tidyr::pivot_longer(cols = dplyr::starts_with("Attribute"),
                       names_to = "Attribute_Name",
                       values_to = "Attribute_Value") %>%

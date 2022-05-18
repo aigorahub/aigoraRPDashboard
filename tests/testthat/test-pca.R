@@ -1,9 +1,10 @@
-#
-# data <- openxlsx::read.xlsx("../testdata/Study1.xlsx")%>%
+# library(tidyverse)
+# data <- openxlsx::read.xlsx("tests/testdata/Study1.xlsx")%>%
 #   tidyr::pivot_longer(cols = dplyr::starts_with("Attribute"),
 #                       names_to = "Attribute_Name",
 #                       values_to = "Attribute_Value") %>%
 #   dplyr::mutate(Study = "Study1")
+#
 # pca_data <- prep_pca_data(data,
 #                           .id_cols = c(Product_Name, Study),
 #                           .attributes_name_colname = "Attribute_Name",

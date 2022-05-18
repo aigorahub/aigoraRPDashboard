@@ -260,8 +260,8 @@ make_radar_plot <- function(radar_plot_data
     dplyr::select(Product_Name, Attribute, mean) %>%
     tidyr::pivot_wider(names_from = Attribute, values_from = mean) %>%
     tibble::column_to_rownames("Product_Name") %>%
-    dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), ~(. - min(.))/(max(.) - min(.)))) %>%
-    dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), replace_na, 0.5)) %>%
+    dplyr::mutate(dplyr::across(tidyselect:::where(is.numeric), ~(. - min(.))/(max(.) - min(.)))) %>%
+    dplyr::mutate(dplyr::across(tidyselect:::where(is.numeric), replace_na, 0.5)) %>%
     dplyr::mutate(group = rownames(.)) %>%
     dplyr::relocate(group, .before = tidyselect::everything()) %>%
     as.data.frame() %>%
