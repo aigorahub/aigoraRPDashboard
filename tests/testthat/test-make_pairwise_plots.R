@@ -1,23 +1,23 @@
-context("make-pairwise-plots")
-
-
-data <- openxlsx::read.xlsx("tests/testdata/Study1.xlsx") %>%
-  tidyr::pivot_longer(cols = dplyr::starts_with("Attribute"),
-                      names_to = "Attribute_Name",
-                      values_to = "Attribute_Value") %>%
-  dplyr::mutate(Study = "Study1")
-
-
-#manage_cases()
-
-
-test_that("makePairwisePlot generates a list", {
-  expect_match(typeof(makePairwisePlot("Attribute11_Scaled", "Attribute12_Scaled", data)), "list")
-})
-
-test_that("makePairwisePlot generates a plot", {
-  vdiffr::expect_doppelganger(title="rplot001", makePairwisePlot("Attribute11_Scaled", "Attribute12_Scaled", data))
-})
+# context("make-pairwise-plots")
+#
+#
+# data <- openxlsx::read.xlsx("tests/testdata/Study1.xlsx") %>%
+#   tidyr::pivot_longer(cols = dplyr::starts_with("Attribute"),
+#                       names_to = "Attribute_Name",
+#                       values_to = "Attribute_Value") %>%
+#   dplyr::mutate(Study = "Study1")
+#
+#
+# #manage_cases()
+#
+#
+# test_that("makePairwisePlot generates a list", {
+#   expect_match(typeof(makePairwisePlot("Attribute11_Scaled", "Attribute12_Scaled", data)), "list")
+# })
+#
+# test_that("makePairwisePlot generates a plot", {
+#   vdiffr::expect_doppelganger(title="rplot001", makePairwisePlot("Attribute11_Scaled", "Attribute12_Scaled", data))
+# })
 
 
 

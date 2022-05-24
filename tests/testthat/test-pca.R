@@ -14,6 +14,6 @@
 #
 # plot(pca_data, num_vars_to_show = 4)
 
-# test_that("pca works", {
-#   expect_equal(2 * 2, 4)
-# })
+test_that("pca works", {
+  expect_equal(2 * 2, 4)
+})
